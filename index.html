@@ -7,22 +7,22 @@
 <title>Москва RP</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#8da5b5;font-family:Arial}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#91aabb;font-family:Arial}
 #renderCanvas{width:100%;height:100%;display:block;touch-action:none}
-#logo{position:fixed;top:17px;left:17px;color:white;font-size:21px;font-weight:900;text-shadow:0 2px 8px #000;pointer-events:none}
-#sub{position:fixed;top:44px;left:18px;color:#eee;font-size:11px;text-shadow:0 2px 5px #000;pointer-events:none}
-#controls{position:fixed;bottom:24px;left:18px;display:grid;grid-template-columns:58px 58px 58px;gap:7px}
-button{height:56px;width:58px;border:1px solid #ffffff70;border-radius:15px;background:#111a;color:white;font-size:24px;touch-action:none}
+#loading{position:fixed;inset:0;background:#17232d;color:white;display:flex;align-items:center;justify-content:center;text-align:center;z-index:10;line-height:1.7;padding:25px}
+#logo{position:fixed;top:15px;left:16px;color:white;font-weight:bold;font-size:21px;text-shadow:0 2px 6px #000;pointer-events:none}
+#sub{position:fixed;top:43px;left:17px;color:white;font-size:11px;text-shadow:0 2px 5px #000;pointer-events:none}
+#controls{position:fixed;bottom:22px;left:18px;display:grid;grid-template-columns:58px 58px 58px;gap:7px}
+button{width:58px;height:56px;border:1px solid #ffffff80;border-radius:14px;background:#17232dcc;color:white;font-size:24px;touch-action:none}
 #up{grid-column:2}
 #left{grid-column:1;grid-row:2}
 #down{grid-column:2;grid-row:2}
 #right{grid-column:3;grid-row:2}
-#status{position:fixed;right:15px;bottom:30px;color:white;font-size:12px;text-shadow:0 2px 5px #000}
-#loading{position:fixed;inset:0;background:#17232d;color:white;display:grid;place-items:center;font-size:20px;z-index:5}
+#status{position:fixed;right:15px;bottom:28px;color:white;font-size:12px;text-shadow:0 2px 5px #000}
 </style>
 </head>
 <body>
-<div id="loading">МОСКВА RP<br>Загрузка города...</div>
+<div id="loading">МОСКВА RP<br>Подключение игрового движка...</div>
 <canvas id="renderCanvas"></canvas>
 <div id="logo">МОСКВА RP</div>
 <div id="sub">OPEN WORLD • CITY LIFE</div>
@@ -32,278 +32,190 @@ button{height:56px;width:58px;border:1px solid #ffffff70;border-radius:15px;back
 <button id="down">▼</button>
 <button id="right">▶</button>
 </div>
-<div id="status">МОСКВА • 3D</div>
+<div id="status">Загрузка...</div>
 
-<script src="https://cdn.babylonjs.com/babylon.js"></script>
 <script>
+const loading=document.getElementById("loading");
+function error(message){
+ loading.style.display="flex";
+ loading.innerHTML="МОСКВА RP<br>"+message+"<br><br>Обнови страницу и попробуй ещё раз.";
+}
+const script=document.createElement("script");
+script.src="https://cdn.babylonjs.com/babylon.js";
+script.onload=()=>startGame();
+script.onerror=()=>error("Не удалось загрузить 3D-движок. Проверь интернет.");
+document.head.appendChild(script);
+
+function startGame(){
+try{
 const canvas=document.getElementById("renderCanvas");
-const engine=new BABYLON.Engine(canvas,true,{preserveDrawingBuffer:false,stencil:true,antialias:true});
-engine.setHardwareScalingLevel(1);
+const engine=new BABYLON.Engine(canvas,true,{antialias:true,preserveDrawingBuffer:false,stencil:false});
+engine.setHardwareScalingLevel(1.5);
 
 const scene=new BABYLON.Scene(engine);
-scene.clearColor=new BABYLON.Color4(.58,.72,.81,1);
+scene.clearColor=new BABYLON.Color4(.55,.70,.80,1);
 scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;
-scene.fogDensity=.0015;
-scene.fogColor=new BABYLON.Color3(.58,.70,.77);
+scene.fogDensity=.0018;
+scene.fogColor=new BABYLON.Color3(.55,.70,.80);
 
-// Свет и тени
-const hemi=new BABYLON.HemisphericLight("skyLight",new BABYLON.Vector3(0,1,0),.85);
-hemi.groundColor=new BABYLON.Color3(.25,.28,.29);
-const sun=new BABYLON.DirectionalLight("sun",new BABYLON.Vector3(-.5,-1,.35),2.1);
-sun.position=new BABYLON.Vector3(100,180,-100);
-const shadows=new BABYLON.ShadowGenerator(1024,sun);
-shadows.useBlurExponentialShadowMap=true;
-shadows.blurKernel=16;
+const camera=new BABYLON.FollowCamera("camera",new BABYLON.Vector3(0,7,20),scene);
+camera.radius=17;
+camera.heightOffset=6;
+camera.rotationOffset=180;
+camera.cameraAcceleration=.06;
+camera.maxCameraSpeed=20;
+scene.activeCamera=camera;
 
-// Материалы
-function pbr(name,color,rough=.8,metal=0){
- const m=new BABYLON.PBRMaterial(name,scene);
- m.albedoColor=BABYLON.Color3.FromHexString(color);
- m.roughness=rough;
- m.metallic=metal;
- return m;
+const light=new BABYLON.HemisphericLight("light",new BABYLON.Vector3(0,1,0),1.3);
+light.groundColor=new BABYLON.Color3(.35,.35,.35);
+const sun=new BABYLON.DirectionalLight("sun",new BABYLON.Vector3(-.5,-1,.4),1.3);
+
+function material(name,color,rough=.8,metal=0){
+const m=new BABYLON.PBRMaterial(name,scene);
+m.albedoColor=BABYLON.Color3.FromHexString(color);
+m.roughness=rough;
+m.metallic=metal;
+return m;
 }
-const asphalt=pbr("Асфальт","#30343a",.95);
-const concrete=pbr("Бетон","#858887",.9);
-const grass=pbr("Газон","#526b48",1);
-const white=pbr("Разметка","#e6e5dc",.7);
-const glass=pbr("Стекло","#294b60",.18,.65);
-const darkGlass=pbr("Тёмное стекло","#182d3b",.15,.7);
-const metal=pbr("Металл","#414a50",.35,.75);
-const black=pbr("Резина","#111315",.95);
-const treeMat=pbr("Листва","#315b39",1);
-const trunkMat=pbr("Ствол","#59402c",1);
-const colors=["#9c9b94","#b8b5aa","#858f91","#c1b9a9","#777f86","#aaa9a2"];
-const buildings=[];
+const ground=material("Земля","#536a48");
+const asphalt=material("Асфальт","#30343a",.95);
+const sidewalk=material("Тротуар","#92938e");
+const glass=material("Стекло","#385d72",.25,.4);
+const white=material("Разметка","#e4e2d9");
+const metal=material("Металл","#4b5155",.4,.6);
 
-function box(name,w,h,d,x,y,z,material,shadow=true){
- const m=BABYLON.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);
- m.position.set(x,y+h/2,z);
- m.material=material;
- if(shadow){m.receiveShadows=true;m.castShadow=true;shadows.addShadowCaster(m)}
- return m;
-}
-function plane(name,w,h,x,y,z,material,rotationX=0){
- const m=BABYLON.MeshBuilder.CreatePlane(name,{width:w,height:h},scene);
- m.position.set(x,y,z);m.rotation.x=rotationX;m.material=material;return m;
+function block(name,w,h,d,x,y,z,mat){
+const m=BABYLON.MeshBuilder.CreateBox(name,{width:w,height:h,depth:d},scene);
+m.position.set(x,y+h/2,z);
+m.material=mat;
+return m;
 }
 
-// Земля
-box("Огромная территория",1200,1,1200,0,-.6,0,grass,false);
-
-// Процедурная текстура асфальта
-const asphaltTexture=new BABYLON.DynamicTexture("asphaltTexture",{width:512,height:512},scene,false);
-const ctx=asphaltTexture.getContext();
-ctx.fillStyle="#34383d";ctx.fillRect(0,0,512,512);
-for(let i=0;i<5000;i++){
- const v=70+Math.random()*45;
- ctx.fillStyle=`rgba(${v},${v},${v},${Math.random()*.16})`;
- ctx.fillRect(Math.random()*512,Math.random()*512,1+Math.random()*2,1+Math.random()*2);
-}
-asphaltTexture.update();
-asphalt.albedoTexture=asphaltTexture;
+block("Земля",900,1,900,0,-1,0,ground);
 
 // Дороги
-function road(x,z,w,d){
- const r=box("Дорожное полотно",w,.12,d,x,.02,z,asphalt,false);
- r.receiveShadows=true;
-}
-road(0,0,28,1100);
-road(0,-120,1100,25);
-road(0,120,1100,25);
-road(-180,0,22,1100);
-road(180,0,22,1100);
-road(0,-360,1100,22);
-road(0,360,1100,22);
+block("Главная дорога",28,.12,900,0,0,0,asphalt);
+block("Поперечная дорога",900,.12,28,0,0,-120,asphalt);
+block("Вторая дорога",900,.12,28,0,0,120,asphalt);
+block("Дорога запад",22,.12,900,-180,0,0,asphalt);
+block("Дорога восток",22,.12,900,180,0,0,asphalt);
 
-// Разметка
-function line(x,z,w,d){
- box("Дорожная линия",w,.025,d,x,.095,z,white,false);
+for(let z=-420;z<420;z+=18){
+block("Разметка",.18,.03,8,0,.09,z,white);
 }
-for(let z=-520;z<520;z+=13){
- line(0,z,.18,6);
- line(-180,z,.15,5);
- line(180,z,.15,5);
+for(let x=-420;x<420;x+=18){
+block("Разметка",8,.03,.18,x,.09,-120,white);
+block("Разметка",8,.03,.18,x,.09,120,white);
 }
-for(let x=-520;x<520;x+=13){
- line(x,-120,6,.16);
- line(x,120,6,.16);
- line(x,-360,6,.16);
- line(x,360,6,.16);
+for(const x of [-24,24,-195,195]){
+block("Тротуар",5,.25,900,x,.08,0,sidewalk);
 }
 
-// Тротуары
-for(let x of [-24,24,-195,-165,165,195]){
- box("Тротуар",5,.3,1100,x,.08,0,concrete,false);
+// Городские здания
+const buildingColors=["#aaa79c","#89969a","#b9b4a7","#7e898e","#c2bcae"];
+let index=0;
+for(let x=-400;x<=400;x+=70){
+for(let z=-400;z<=400;z+=70){
+if(Math.abs(x)<48||Math.abs(x-180)<35||Math.abs(x+180)<35)continue;
+if(Math.abs(z+120)<40||Math.abs(z-120)<40)continue;
+for(let n=0;n<2;n++){
+const bx=x+(Math.random()-.5)*20;
+const bz=z+(Math.random()-.5)*20;
+const w=20+Math.random()*13;
+const d=20+Math.random()*13;
+const h=18+Math.random()*45;
+const facade=material("Фасад"+index,buildingColors[index++%5]);
+block("Дом",w,h,d,bx,h/2,bz,facade);
+for(let y=5;y<h-3;y+=6){
+for(let side of [-1,1]){
+const win=block("Окно",2,2,.08,bx,y+1,bz+side*(d/2+.05),glass);
 }
-for(let z of [-140,-100,100,140,-380,-340,340,380]){
- box("Тротуар",1100,.3,5,0,.08,z,concrete,false);
 }
-
-// Фасады зданий с окнами
-function makeBuilding(x,z,w,d,h,color,index){
- const wall=pbr("Фасад "+index,color,.82,.08);
- box("Корпус здания",w,h,d,x,0,z,wall);
- const rows=Math.floor(h/3.2);
- const cols=Math.max(2,Math.floor(w/3.5));
- for(let side of [-1,1]){
-  for(let r=1;r<rows;r++){
-   for(let c=0;c<cols;c++){
-    const wx=x-w/2+1.7+c*(w-3.4)/Math.max(1,cols-1);
-    const wy=r*3.2;
-    const winMat=Math.random()>.16?glass:darkGlass;
-    box("Окно фасада",1.45,1.85,.09,wx,wy,z+side*(d/2+.055),winMat,false);
-   }
-  }
- }
- // Крыша и карниз
- box("Карниз",w+.5,.45,d+.5,x,h,z,metal,false);
- // Вход
- box("Входная дверь",2.2,2.7,.12,x,0,z+d/2+.08,darkGlass,false);
- buildings.push({x,z,w,d,h});
 }
-
-// Кварталы
-let seed=0;
-for(let x=-500;x<=500;x+=75){
- for(let z=-500;z<=500;z+=75){
-  if(Math.abs(x)<55||Math.abs(x-180)<45||Math.abs(x+180)<45)continue;
-  if(Math.abs(z+120)<45||Math.abs(z-120)<45||Math.abs(z+360)<45||Math.abs(z-360)<45)continue;
-  const count=1+Math.floor(Math.random()*2);
-  for(let n=0;n<count;n++){
-   const bx=x+(Math.random()-.5)*25;
-   const bz=z+(Math.random()-.5)*25;
-   const w=19+Math.random()*17;
-   const d=19+Math.random()*17;
-   const h=18+Math.random()*55;
-   makeBuilding(bx,bz,w,d,h,colors[seed++%colors.length],seed);
-  }
- }
+}
 }
 
 // Москва-Сити
-function skyscraper(x,z,w,d,h,color){
- const body=pbr("Башня стекло "+x,color,.2,.65);
- box("Основание башни",w+9,3,d+9,x,0,z,metal);
- box("Небоскрёб",w,h,d,x,3,z,body);
- for(let y=8;y<h;y+=5){
-  box("Пояс остекления",w+.12,.22,d+.12,x,y,z,darkGlass,false);
- }
- box("Верх башни",w*.45,7,d*.45,x,h+3,z,body);
+function tower(x,z,w,d,h,color){
+const m=material("Стекло башни",color,.2,.6);
+block("Небоскрёб",w,h,d,x,h/2+2,z,m);
+for(let y=10;y<h;y+=8){
+block("Этажный пояс",w+.15,.25,d+.15,x,y+2,z,metal);
 }
-skyscraper(-65,-120,32,32,155,"#5d8195");
-skyscraper(-20,-120,28,28,205,"#496b82");
-skyscraper(25,-120,34,34,175,"#6e94a7");
-skyscraper(75,-120,25,25,125,"#527b91");
-skyscraper(115,-120,22,22,95,"#7899a8");
-
-// Парк
-box("Парк",105,.2,105,280,.05,270,grass,false);
-function tree(x,z){
- const t=BABYLON.MeshBuilder.CreateCylinder("Ствол",{height:5,diameter:.8},scene);
- t.position.set(x,2.5,z);t.material=trunkMat;
- const crown=BABYLON.MeshBuilder.CreateSphere("Крона",{diameter:7,segments:10},scene);
- crown.position.set(x,7,z);crown.material=treeMat;
 }
-for(let i=0;i<45;i++)tree(235+Math.random()*90,225+Math.random()*90);
+tower(-60,-120,32,32,140,"#527b90");
+tower(-15,-120,29,29,190,"#41647b");
+tower(30,-120,34,34,165,"#668a9e");
+tower(75,-120,25,25,120,"#7496a5");
+tower(115,-120,22,22,90,"#53778a");
 
-// Фонари
-const lampMat=pbr("Фонари","#30363a",.4,.7);
-for(let z=-480;z<=480;z+=55){
- for(let x of [-31,31]){
-  box("Опора фонаря",.25,7,.25,x,0,z,lampMat,false);
-  box("Кронштейн",2,.18,.18,x+(x<0?1:-1),6.8,z,lampMat,false);
-  box("Светильник",.8,.2,.6,x+(x<0?2:-2),6.7,z,white,false);
- }
+// Парковая зона
+const leaves=material("Листва","#315b36");
+const wood=material("Дерево","#64452e");
+block("Парк",95,.2,95,280,.1,260,ground);
+for(let i=0;i<20;i++){
+const x=240+Math.random()*80;
+const z=220+Math.random()*80;
+const trunk=BABYLON.MeshBuilder.CreateCylinder("Ствол",{height:4,diameter:.7},scene);
+trunk.position.set(x,2,z);trunk.material=wood;
+const crown=BABYLON.MeshBuilder.CreateSphere("Крона",{diameter:6,segments:8},scene);
+crown.position.set(x,5,z);crown.material=leaves;
 }
 
-// Машины
-function makeCar(x,z,color){
- const bodyMat=pbr("Кузов авто",color,.3,.65);
- const car=new BABYLON.TransformNode("Автомобиль",scene);
- function part(w,h,d,px,py,pz,mat){
-  const m=BABYLON.MeshBuilder.CreateBox("Деталь авто",{width:w,height:h,depth:d},scene);
-  m.position.set(px,py,pz);m.material=mat;m.parent=car;
- }
- part(4.5,1.25,8,0,1,0,bodyMat);
- part(3.8,1.35,4,0,2.15,-.4,glass);
- for(let wx of [-2.25,2.25]){
-  for(let wz of [-2.6,2.6]){
-   const wheel=BABYLON.MeshBuilder.CreateCylinder("Колесо",{diameter:1.45,height:.45,tessellation:16},scene);
-   wheel.rotation.z=Math.PI/2;wheel.position.set(wx,.8,wz);wheel.material=black;wheel.parent=car;
-  }
- }
- car.position.set(x,0,z);
-}
-const carColors=["#a51f27","#171b20","#d4d4d0","#263d65","#777d83","#eeeeea"];
-for(let i=0;i<24;i++){
- const x=(Math.floor(Math.random()*8)-4)*75+30;
- const z=(Math.floor(Math.random()*8)-4)*75+30;
- if(Math.abs(x)<25||Math.abs(z)<25)continue;
- makeCar(x,z,carColors[i%carColors.length]);
-}
-
-// Персонаж
+// Игрок
 const player=new BABYLON.TransformNode("Игрок",scene);
-const bodyMat=pbr("Одежда игрока","#202a39",.8);
-const skin=pbr("Кожа","#bd9273",.9);
-const body=BABYLON.MeshBuilder.CreateCapsule("Тело",{height:2.8,radius:.55},scene);
-body.position.y=1.55;body.material=bodyMat;body.parent=player;
-const head=BABYLON.MeshBuilder.CreateSphere("Голова",{diameter:1.05,segments:16},scene);
-head.position.y=3.35;head.material=skin;head.parent=player;
-shadows.addShadowCaster(body);
-shadows.addShadowCaster(head);
-player.position.set(0,0,15);
-
-// Камера от третьего лица
-const camera=new BABYLON.FollowCamera("Камера",new BABYLON.Vector3(0,8,30),scene);
+const clothes=material("Одежда","#202d48");
+const skin=material("Кожа","#bd9273");
+const body=BABYLON.MeshBuilder.CreateCapsule("Персонаж",{height:2.8,radius:.55},scene);
+body.position.y=1.5;body.material=clothes;body.parent=player;
+const head=BABYLON.MeshBuilder.CreateSphere("Голова",{diameter:1,segments:12},scene);
+head.position.y=3.3;head.material=skin;head.parent=player;
+player.position.set(0,0,18);
 camera.lockedTarget=player;
-camera.radius=15;
-camera.heightOffset=6;
-camera.rotationOffset=180;
-camera.cameraAcceleration=.045;
-camera.maxCameraSpeed=25;
-scene.activeCamera=camera;
 
 // Управление
 const move={up:false,down:false,left:false,right:false};
 function bind(id,key){
- const b=document.getElementById(id);
- b.addEventListener("pointerdown",e=>{e.preventDefault();move[key]=true;b.setPointerCapture(e.pointerId)});
- b.addEventListener("pointerup",()=>move[key]=false);
- b.addEventListener("pointercancel",()=>move[key]=false);
- b.addEventListener("lostpointercapture",()=>move[key]=false);
+const b=document.getElementById(id);
+b.addEventListener("pointerdown",e=>{
+e.preventDefault();move[key]=true;
+b.setPointerCapture(e.pointerId);
+});
+b.addEventListener("pointerup",()=>move[key]=false);
+b.addEventListener("pointercancel",()=>move[key]=false);
+b.addEventListener("lostpointercapture",()=>move[key]=false);
 }
-bind("up","up");bind("down","down");bind("left","left");bind("right","right");
+bind("up","up");bind("down","down");
+bind("left","left");bind("right","right");
 const keys={};
 addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
 scene.onBeforeRenderObservable.add(()=>{
- const dt=Math.min(engine.getDeltaTime()/1000,.04);
- let x=0,z=0;
- if(move.up||keys.w||keys.arrowup)z-=1;
- if(move.down||keys.s||keys.arrowdown)z+=1;
- if(move.left||keys.a||keys.arrowleft)x-=1;
- if(move.right||keys.d||keys.arrowright)x+=1;
- if(x||z){
-  const len=Math.hypot(x,z);x/=len;z/=len;
-  player.position.x+=x*12*dt;
-  player.position.z+=z*12*dt;
-  player.rotation.y=Math.atan2(x,z);
- }
+const dt=Math.min(engine.getDeltaTime()/1000,.04);
+let x=0,z=0;
+if(move.up||keys.w||keys.arrowup)z-=1;
+if(move.down||keys.s||keys.arrowdown)z+=1;
+if(move.left||keys.a||keys.arrowleft)x-=1;
+if(move.right||keys.d||keys.arrowright)x+=1;
+if(x||z){
+const len=Math.hypot(x,z);
+x/=len;z/=len;
+player.position.x+=x*13*dt;
+player.position.z+=z*13*dt;
+player.rotation.y=Math.atan2(x,z);
+}
 });
 
-const pipeline=new BABYLON.DefaultRenderingPipeline("graphics",true,scene,[camera]);
-pipeline.fxaaEnabled=true;
-pipeline.imageProcessingEnabled=true;
-pipeline.imageProcessing.contrast=1.15;
-pipeline.imageProcessing.exposure=1.05;
-
 engine.runRenderLoop(()=>scene.render());
-window.addEventListener("resize",()=>engine.resize());
-
-setTimeout(()=>document.getElementById("loading").style.display="none",1800);
+addEventListener("resize",()=>engine.resize());
+document.getElementById("status").textContent="МОСКВА • 3D";
+loading.style.display="none";
+}catch(e){
+console.error(e);
+error("Ошибка запуска: "+e.message);
+}
+}
 </script>
 </body>
 </html>
