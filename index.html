@@ -3,65 +3,194 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>МОСКВА RP</title>
 <style>
 *{box-sizing:border-box}
-body{
- margin:0;background:#090d13;color:white;
- font-family:Arial,sans-serif;
+body{margin:0;overflow:hidden;background:#101820;font-family:Arial;color:white}
+#game{position:fixed;inset:0}
+canvas{display:block}
+#top{
+ position:fixed;top:12px;left:12px;right:12px;
+ display:flex;justify-content:space-between;align-items:center;
+ pointer-events:none
 }
-header{
- padding:24px 18px;text-align:center;
- background:linear-gradient(135deg,#101d2c,#080b10);
- border-bottom:1px solid #263344;
+.logo{font-weight:900;letter-spacing:2px;font-size:20px;text-shadow:0 2px 5px #000}
+.info{font-size:11px;background:#101820cc;padding:9px 12px;border-radius:9px}
+#controls{
+ position:fixed;bottom:22px;left:18px;right:18px;
+ display:flex;justify-content:space-between;align-items:end;
 }
-.logo{font-size:32px;font-weight:900;letter-spacing:3px}
-.sub{color:#a9b6c6;font-size:12px;margin-top:8px}
-main{padding:20px;max-width:700px;margin:auto}
-.city{
- height:220px;border-radius:15px;
- background:linear-gradient(150deg,#304b62,#111b2a 65%,#080b10);
- display:flex;align-items:center;justify-content:center;
- text-align:center;border:1px solid #34465b;
+.pad{display:grid;grid-template-columns:repeat(3,53px);gap:5px}
+.control{
+ width:53px;height:53px;border:1px solid #ffffff66;
+ border-radius:13px;background:#142436dd;color:white;
+ font-size:22px;touch-action:none
 }
-.city h2{font-size:27px;text-shadow:0 2px 8px black}
-.status{color:#9eafc1;font-size:13px;margin-top:12px}
-h3{margin-top:26px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.item{
- background:#151d28;border:1px solid #29384a;
- border-radius:12px;padding:16px;
-}
-.item b{display:block;margin-bottom:7px}
-.item span{font-size:12px;color:#aab6c4}
-footer{text-align:center;color:#718096;padding:30px;font-size:12px}
+.control:active{background:#42698c}
+#hint{position:fixed;bottom:155px;left:0;right:0;text-align:center;color:#ddd;font-size:12px;text-shadow:0 2px 5px black}
 </style>
 </head>
 <body>
-<header>
+<div id="game"></div>
+<div id="top">
  <div class="logo">МОСКВА RP</div>
- <div class="sub">ТВОЯ ЖИЗНЬ — ТВОИ ПРАВИЛА</div>
-</header>
-<main>
- <div class="city">
-  <div>
-   <h2>МОСКВА</h2>
-   <div>Открытый мир начинается здесь</div>
-  </div>
+ <div class="info">ТЕСТ 3D • РАЙОН №1</div>
+</div>
+<div id="hint">Управляй персонажем кнопками или клавиатурой</div>
+<div id="controls">
+ <div class="pad">
+  <div></div><button class="control" data-key="up">▲</button><div></div>
+  <button class="control" data-key="left">◀</button>
+  <button class="control" data-key="down">▼</button>
+  <button class="control" data-key="right">▶</button>
  </div>
- <div class="status">Разработка проекта • Версия 0.1</div>
- <h3>МИР ИГРЫ</h3>
- <div class="grid">
-  <div class="item"><b>🏙️ Москва-Сити</b><span>Небоскрёбы и элитная недвижимость</span></div>
-  <div class="item"><b>🚘 Автомобили</b><span>Покупка, тюнинг и гаражи</span></div>
-  <div class="item"><b>🏍️ Мотоциклы</b><span>Питбайки, вилли и трюки</span></div>
-  <div class="item"><b>🏠 Недвижимость</b><span>Квартиры и собственные дома</span></div>
-  <div class="item"><b>👮 ГИБДД</b><span>Патрули и дорожная система</span></div>
-  <div class="item"><b>💼 Работы</b><span>Заработок и профессии</span></div>
- </div>
-</main>
-<footer>МОСКВА RP © 2026</footer>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+
+const root=document.getElementById('game');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9bb5c8);
+scene.fog=new THREE.Fog(0x9bb5c8,55,150);
+
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,300);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+root.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xdceaff,0x59604c,2));
+const sun=new THREE.DirectionalLight(0xffffff,2.2);
+sun.position.set(-25,45,20);
+sun.castShadow=true;
+scene.add(sun);
+
+function material(color){return new THREE.MeshStandardMaterial({color,roughness:.85})}
+function block(w,h,d,x,y,z,color){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));
+ m.position.set(x,y+h/2,z);
+ m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;
+}
+
+// Земля и дороги
+block(180,.2,180,0,-.2,0,0x66715e);
+block(18,.08,180,0,0,0,0x292e34);
+block(180,.08,18,0,.01,0,0x292e34);
+
+// Разметка дорог
+for(let z=-85;z<90;z+=10) block(.14,.025,4,0,.07,z,0xe4dfc7);
+for(let x=-85;x<90;x+=10) block(4,.025,.14,x,.07,0,0xe4dfc7);
+
+// Тротуары
+block(3,.16,180,-10.5,.04,0,0xb1b0a7);
+block(3,.16,180,10.5,.04,0,0xb1b0a7);
+block(180,.16,3,0,.04,-10.5,0xb1b0a7);
+block(180,.16,3,0,.04,10.5,0xb1b0a7);
+
+// Здания района
+const colors=[0xb9b8b0,0x9ba7ad,0xc3b5a1,0x858f98,0xd0c9bb];
+for(let x=-48;x<=48;x+=16){
+ for(let z=-48;z<=48;z+=16){
+  if(Math.abs(x)<13 || Math.abs(z)<13) continue;
+  const h=12+Math.random()*24;
+  const w=9+Math.random()*3;
+  block(w,h,10,x,h/2,z,colors[Math.floor(Math.random()*colors.length)]);
+  // Окна
+  for(let yy=3;yy<h-2;yy+=3){
+   for(let xx=-3;xx<=3;xx+=2.5){
+    const win=new THREE.Mesh(new THREE.BoxGeometry(.9,1.2,.08),material(0x344d60));
+    win.position.set(x+xx,yy,z+5.06);
+    scene.add(win);
+   }
+  }
+ }
+}
+
+// Несколько деревьев
+function tree(x,z){
+ block(.35,2,.35,x,0,z,0x60452f);
+ const crown=new THREE.Mesh(new THREE.SphereGeometry(1.5,8,7),material(0x426d48));
+ crown.position.set(x,3,z);scene.add(crown);
+}
+for(let z=-35;z<=35;z+=10){tree(-12.5,z);tree(12.5,z)}
+
+// Игровой персонаж
+const player=new THREE.Group();
+scene.add(player);
+const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.9,4,8),material(0x202b3d));
+body.position.y=1.35;body.castShadow=true;player.add(body);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.34,16,12),material(0xd4a47d));
+head.position.y=2.25;head.castShadow=true;player.add(head);
+const legs=block; // ноги создаём внутри группы
+for(const x of [-.2,.2]){
+ const leg=new THREE.Mesh(new THREE.BoxGeometry(.19,.75,.22),material(0x171b23));
+ leg.position.set(x,.48,0);player.add(leg);
+}
+player.position.set(0,0,8);
+
+// Управление
+const keys={up:false,down:false,left:false,right:false};
+document.querySelectorAll('[data-key]').forEach(btn=>{
+ const k=btn.dataset.key;
+ btn.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true;btn.setPointerCapture(e.pointerId)});
+ const release=e=>{keys[k]=false};
+ btn.addEventListener('pointerup',release);
+ btn.addEventListener('pointercancel',release);
+ btn.addEventListener('lostpointercapture',release);
+});
+addEventListener('keydown',e=>{
+ if(e.key==='w'||e.key==='ArrowUp')keys.up=true;
+ if(e.key==='s'||e.key==='ArrowDown')keys.down=true;
+ if(e.key==='a'||e.key==='ArrowLeft')keys.left=true;
+ if(e.key==='d'||e.key==='ArrowRight')keys.right=true;
+});
+addEventListener('keyup',e=>{
+ if(['w','ArrowUp'].includes(e.key))keys.up=false;
+ if(['s','ArrowDown'].includes(e.key))keys.down=false;
+ if(['a','ArrowLeft'].includes(e.key))keys.left=false;
+ if(['d','ArrowRight'].includes(e.key))keys.right=false;
+});
+
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.05);
+ let dx=0,dz=0;
+ if(keys.up)dz-=1;
+ if(keys.down)dz+=1;
+ if(keys.left)dx-=1;
+ if(keys.right)dx+=1;
+ if(dx||dz){
+  const len=Math.hypot(dx,dz);
+  dx/=len;dz/=len;
+  player.position.x+=dx*8*dt;
+  player.position.z+=dz*8*dt;
+  player.rotation.y=Math.atan2(dx,dz);
+ }
+ // Камера следует за персонажем
+ const behind=new THREE.Vector3(
+  Math.sin(player.rotation.y)*7,
+  4.5,
+  Math.cos(player.rotation.y)*7
+ );
+ const target=player.position.clone().add(behind);
+ camera.position.lerp(target,.09);
+ camera.lookAt(player.position.x,1.4,player.position.z);
+ renderer.render(scene,camera);
+}
+camera.position.set(0,5,16);
+animate();
+
+addEventListener('resize',()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+</script>
 </body>
 </html>
 
